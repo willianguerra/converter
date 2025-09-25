@@ -18,6 +18,7 @@ import {
 import { MultiImageUpload } from "@/components/multi-image-upload";
 import { MultiAudioUpload } from "@/components/multi-audio-upload";
 import Background from "@/components/background";
+import axios from "axios";
 
 // --- Schema de um roteiro ---
 const roteiroSchema = z.object({
@@ -25,6 +26,7 @@ const roteiroSchema = z.object({
   images: z
     .array(z.instanceof(File))
     .min(1, "Pelo menos uma imagem é obrigatória"),
+  dir: z.string().min(1, "Informe o nome da pasta que o video ficara salvo")
 });
 
 // --- Schema geral (lista de roteiros) ---
@@ -37,7 +39,7 @@ type FormData = z.infer<typeof schema>;
 const MediaUploadForm = () => {
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { roteiros: [{ audio: [], images: [] }] },
+    defaultValues: { roteiros: [{ audio: [], images: [], dir: '' }] },
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -61,8 +63,8 @@ const MediaUploadForm = () => {
       if (!uploadRes.ok) throw new Error("Erro no upload");
 
       // Processar depois do upload
-      const processRes = await fetch("/api/processar", { method: "POST" });
-      if (!processRes.ok) throw new Error("Erro no processamento");
+      const processRes = await axios.post("/api/processar");
+      if (processRes.status != 201) throw new Error("Erro no processamento");
 
       console.log(`✅ Roteiro ${idx + 1} concluído`);
     }
@@ -150,7 +152,7 @@ const MediaUploadForm = () => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => append({ audio: [], images: [] })}
+                onClick={() => append({ audio: [], images: [], dir: '' })}
               >
                 + Adicionar Roteiro
               </Button>

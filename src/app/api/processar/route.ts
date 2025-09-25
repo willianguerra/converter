@@ -5,22 +5,23 @@ import { promises as fs } from "fs";
 
 const execFileAsync = promisify(execFile);
 
-const SILENCIO_DIR = process.env.SILENCIO_DIR || "silencio";
+const CAMINHO_ARQUIVOS = process.env.CAMINHO_ARQUIVOS || '';
+const SILENCIO_DIR = CAMINHO_ARQUIVOS + 'silencio' || "tessilenciote";
 const SILENCIO_FINAL = path.join(SILENCIO_DIR, "audio_finalizados");
-const GERADOR_DIR = process.env.GERADOR_DIR || "gerador";
-
-async function runExecutable(
-  exePath: string,
-  args: string[],
-  log: (msg: string) => void
-) {
-  log(`▶️ Executando: ${exePath} ${args.join(" ")}`);
-  const { stdout, stderr } = await execFileAsync(exePath, args, {
-    windowsHide: true,
-  });
-  if (stdout) log(stdout);
-  if (stderr) log(stderr);
-  log(`✅ Finalizado: ${exePath}`);
+const GERADOR_DIR = CAMINHO_ARQUIVOS + 'gerador' || "gerador";
+async function runBat(batPath: string, log: (msg: string) => void) {
+  log(`▶️ Executando: ${batPath}`);
+  try {
+    const { stdout, stderr } = await execFileAsync("cmd", ["/c", batPath], {
+      windowsHide: true,
+    });
+    if (stdout) log(stdout);
+    if (stderr) log(stderr);
+    log(`✅ Finalizado: ${batPath}`);
+  } catch (err: any) {
+    log(`❌ Erro na execução ${batPath}: ${err.message}`);
+    throw err;
+  }
 }
 
 async function moveFiles(
@@ -56,16 +57,15 @@ async function moveFiles(
       try {
         await fs.rename(from, to);
         log(`📂 Movido: ${file} -> ${toDir}`);
-      } catch (err) {
-        log(`⚠️ fs.rename falhou para ${file}, tentando copiar...`);
+      } catch {
         const data = await fs.readFile(from);
         await fs.writeFile(to, data);
         await fs.unlink(from);
         log(`✅ Copiado e removido: ${file} -> ${toDir}`);
       }
     }
-  } catch (err) {
-    log(`❌ Erro ao mover arquivos: ${(err as Error).message}`);
+  } catch (err: any) {
+    log(`❌ Erro ao mover arquivos: ${err.message}`);
   }
 }
 
@@ -85,45 +85,39 @@ async function getNextVideoDir(baseDir: string): Promise<string> {
 export async function POST(req: Request) {
   const encoder = new TextEncoder();
   const body = await req.json();
-  const folderName = body.folderName || "videos_ingles"; // padrão
+
+  const DESTINO_DIR = CAMINHO_ARQUIVOS + body
+  const folderName = DESTINO_DIR || "videos_ingles"; // padrão
 
   const stream = new ReadableStream({
-
     async start(controller) {
       const log = (msg: string) =>
         controller.enqueue(encoder.encode(msg + "\n"));
 
       try {
         log(`🎬 Iniciando processamento...`);
-        log(`📂 Pastas configuradas:`);
-        log(`   - SILENCIO_DIR: ${SILENCIO_DIR}`);
-        log(`   - SILENCIO_FINAL: ${SILENCIO_FINAL}`);
-        log(`   - GERADOR_DIR: ${GERADOR_DIR}`);
-        log(`   - DESTINO: ${folderName}`);
 
-        // 1) Executa silencio.exe
-        await runExecutable(SILENCIO_DIR + "silencio.cmd", [], log);
+        // 1) Executa o 1º BAT
+        await runBat(path.join(SILENCIO_DIR, "teste.bat"), log);
 
-        // 2) Move cortes (mp3) para gerador/
-        log(`➡️ Movendo áudios de ${SILENCIO_FINAL} para ${GERADOR_DIR}`);
+        // 2) Move áudios
         await moveFiles(SILENCIO_FINAL, GERADOR_DIR, [".mp3"], log);
 
-        // 3) Executa gerador.exe
-        await runExecutable(GERADOR_DIR + "gerador.cmd", [], log);
+        // 3) Executa o 2º BAT
+        await runBat(path.join(GERADOR_DIR, "teste2.bat"), log);
 
-        // 4) Cria pasta única para vídeos dentro da pasta escolhida
+        // 4) Cria pasta única para vídeos
         const baseDir = path.join(folderName);
         const videoDir = await getNextVideoDir(baseDir);
-        log(`📂 Pasta de vídeos criada: ${videoDir}`);
+        log(`📂 Pasta criada: ${videoDir}`);
 
-        // 5) Move vídeos (mp4) para essa pasta
-        log(`➡️ Movendo vídeos de ${GERADOR_DIR} para ${videoDir}`);
+        // 5) Move vídeos
         await moveFiles(GERADOR_DIR, videoDir, [".mp4"], log);
 
         log("🚀 Processamento concluído com sucesso!");
         controller.close();
-      } catch (err) {
-        log("❌ Erro no processamento: " + (err as Error).message);
+      } catch (err: any) {
+        log("❌ Erro no processamento: " + err.message);
         controller.close();
       }
     },
@@ -134,5 +128,6 @@ export async function POST(req: Request) {
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "no-cache",
     },
+    status: 201,
   });
 }
