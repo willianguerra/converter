@@ -19,6 +19,8 @@ import { MultiImageUpload } from "@/components/multi-image-upload";
 import { MultiAudioUpload } from "@/components/multi-audio-upload";
 import Background from "@/components/background";
 import axios from "axios";
+import { toast } from "react-toastify";
+import { InputFormValidations } from "@/components/input-validation";
 
 // --- Schema de um roteiro ---
 const roteiroSchema = z.object({
@@ -47,6 +49,22 @@ const MediaUploadForm = () => {
     name: "roteiros",
   });
 
+  async function createRoteiro(roteiro: z.infer<typeof roteiroSchema>) {
+    const response = await axios.post("/api/processar", roteiro)
+
+    if (response.status == 201) {
+      return true
+    }
+
+    if (response.status === 409) {
+      throw response.data.error || 'Erro ao criar roteiro.';
+    }
+
+    // pega mensagem de erro do backend se existir
+    throw new Error(response.data?.message || 'Erro ao criar roteiro');
+  }
+
+
   const onSubmit = async (data: FormData) => {
     for (let idx = 0; idx < data.roteiros.length; idx++) {
       const roteiro = data.roteiros[idx];
@@ -62,14 +80,27 @@ const MediaUploadForm = () => {
       });
       if (!uploadRes.ok) throw new Error("Erro no upload");
 
-      // Processar depois do upload
-      const processRes = await axios.post("/api/processar");
-      if (processRes.status != 201) throw new Error("Erro no processamento");
+      toast.promise(
+        createRoteiro(roteiro),
+        {
+          pending: `Criando roteiros`,
+          success: 'Roteiros Criados com sucesso!',
+          error: {
+            render({ data }: any) {
+              return data.message || 'Erro ao criar roteiro';
+            }
+          }
+        },
+        {
+          autoClose: 2000,
+          onClose: async () => {
+            console.log(`✅ Roteiro ${idx + 1} concluído`);
+          }
+        }
+      )
 
-      console.log(`✅ Roteiro ${idx + 1} concluído`);
+
     }
-
-    alert("Todos os roteiros processados com sucesso!");
   };
 
 
@@ -91,6 +122,9 @@ const MediaUploadForm = () => {
                 </h2>
 
                 {/* Upload de Áudio */}
+
+                <InputFormValidations label="Nome da Pasta" name={`roteiros.${index}.dir`} placeholder="Nome da Pasta" />
+
                 <FormField
                   control={form.control}
                   name={`roteiros.${index}.audio`}

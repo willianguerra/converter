@@ -1,7 +1,7 @@
 import React from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-
+import { ToastContainer } from 'react-toastify';
 import { ThemeProvider } from "next-themes";
 
 import "./globals.css";
@@ -95,6 +95,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <ToastContainer />
           <Header />
           {children}
         </ThemeProvider>

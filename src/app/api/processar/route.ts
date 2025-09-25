@@ -86,7 +86,7 @@ export async function POST(req: Request) {
   const encoder = new TextEncoder();
   const body = await req.json();
 
-  const DESTINO_DIR = CAMINHO_ARQUIVOS + body
+  const DESTINO_DIR = CAMINHO_ARQUIVOS + body.dir
   const folderName = DESTINO_DIR || "videos_ingles"; // padrão
 
   const stream = new ReadableStream({
