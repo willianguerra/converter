@@ -22,6 +22,7 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import { InputFormValidations } from "@/components/input-validation";
 import { useTheme } from "next-themes";
+import { ConversorSRT } from "@/components/conversor-srt";
 
 // --- Schema de um roteiro ---
 const roteiroSchema = z.object({
@@ -202,6 +203,7 @@ const MediaUploadForm = () => {
           </form>
         </Form>
       </div>
+      <ConversorSRT />
     </Background>
   );
 };
