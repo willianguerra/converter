@@ -19,8 +19,9 @@ import { MultiImageUpload } from "@/components/multi-image-upload";
 import { MultiAudioUpload } from "@/components/multi-audio-upload";
 import Background from "@/components/background";
 import axios from "axios";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import { InputFormValidations } from "@/components/input-validation";
+import { useTheme } from "next-themes";
 
 // --- Schema de um roteiro ---
 const roteiroSchema = z.object({
@@ -39,6 +40,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 const MediaUploadForm = () => {
+  const { theme } = useTheme()
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { roteiros: [{ audio: [], images: [], dir: '' }] },
@@ -106,6 +108,8 @@ const MediaUploadForm = () => {
 
   return (
     <Background>
+      <ToastContainer theme={theme ?? 'dark'} />
+
       <div className="min-h-screen flex flex-col items-center  p-4 overflow-auto pt-22">
         <Form {...form}>
           <form
